@@ -22,7 +22,7 @@ from albumentations.pytorch import ToTensorV2
 from torch.utils.data import DataLoader, Subset
 
 from common.paths import DATA_ROOT
-from segmentation.dataset import PotholeMix
+from segmentation.dataset import PotholeMix, RDD2022Boxes
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -118,15 +118,26 @@ def main():
     (out / "config.yaml").write_text(yaml.safe_dump(cfg))
     print(f"device={device} data={DATA_ROOT} out={out}")
 
-    train_ds = limited(PotholeMix("training", transform=Transform(cfg["max_long_side"], cfg["crop"])), cfg.get("limit"))
-    val_ds = limited(PotholeMix("validation", transform=Transform(cfg["max_long_side"])), cfg.get("limit"))
+    train_tf, val_tf = Transform(cfg["max_long_side"], cfg["crop"]), Transform(cfg["max_long_side"])
+    dataset = cfg.get("dataset", "pothole_mix")
+    if dataset == "pothole_mix":
+        train_ds, val_ds = PotholeMix("training", transform=train_tf), PotholeMix("validation", transform=val_tf)
+    elif dataset == "rdd_norway":  # weak labels: filled detection boxes
+        train_ds, val_ds = RDD2022Boxes("Norway", "train", transform=train_tf), RDD2022Boxes("Norway", "val", transform=val_tf)
+    else:
+        raise ValueError(f"unknown dataset: {dataset}")
+    train_ds, val_ds = limited(train_ds, cfg.get("limit")), limited(val_ds, cfg.get("limit"))
     train_dl = DataLoader(train_ds, cfg["batch_size"], shuffle=True, num_workers=cfg["num_workers"],
                           drop_last=len(train_ds) > cfg["batch_size"], pin_memory=use_amp,
                           persistent_workers=cfg["num_workers"] > 0)
     val_dl = DataLoader(val_ds, 1, num_workers=cfg["num_workers"])  # batch 1: validation images differ in size
 
-    model = smp.create_model(cfg["arch"], encoder_name=cfg["encoder"], encoder_weights=cfg["encoder_weights"],
-                             classes=1).to(device)
+    init = cfg.get("init_checkpoint")  # continue from an earlier run (e.g. Pothole-Mix -> RDD-Norway)
+    model = smp.create_model(cfg["arch"], encoder_name=cfg["encoder"], classes=1,
+                             encoder_weights=None if init else cfg["encoder_weights"])
+    if init:
+        model.load_state_dict(torch.load(init, map_location="cpu", weights_only=False)["model"])
+    model.to(device)
     dice = smp.losses.DiceLoss("binary")
     bce = torch.nn.BCEWithLogitsLoss()
     opt = torch.optim.AdamW(model.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])

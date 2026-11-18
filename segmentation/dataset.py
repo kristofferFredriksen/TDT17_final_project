@@ -1,16 +1,17 @@
 """Segmentation datasets.
 
-Both return (image, mask): image HxWx3 uint8 RGB, mask HxW uint8 with
-0 = background, 1 = crack, 2 = pothole (Pothole-Mix) or 0/1 = damage (NRD).
+All return (image, mask): image HxWx3 uint8 RGB, mask HxW uint8 with
+0 = background, 1 = crack, 2 = pothole (Pothole-Mix) or 0/1 = damage (NRD, RDD2022 boxes).
 Use `mask > 0` for binary damage-vs-background.
 """
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
 
-from common.paths import NRD, POTHOLE_MIX
+from common.paths import NRD, POTHOLE_MIX, RDD2022
 
 BACKGROUND, CRACK, POTHOLE = 0, 1, 2
 
@@ -94,6 +95,53 @@ class NorwegianRoadDamage:
         mask = np.zeros((h, w), np.uint8)
         for a in anns:
             mask |= polygons_to_mask(a["segmentation"], h, w)
+        if self.transform:
+            out = self.transform(image=image, mask=mask)
+            image, mask = out["image"], out["mask"]
+        return image, mask
+
+
+
+def rdd_boxes(xml_path, classes):
+    """[(xmin, ymin, xmax, ymax)] for objects whose name is in classes, from a Pascal VOC XML file."""
+    boxes = []
+    for obj in ET.parse(xml_path).getroot().iter("object"):
+        if obj.findtext("name") in classes:
+            b = obj.find("bndbox")
+            boxes.append(tuple(float(b.findtext(k)) for k in ("xmin", "ymin", "xmax", "ymax")))
+    return boxes
+
+
+class RDD2022Boxes:
+    """RDD2022 detection data as weak segmentation labels: every damage box is filled with 1.
+
+    Only the train folder has labels, so val is carved out of it. The last val_fraction of the
+    (sorted) images is used as val instead of a random sample: file numbers likely follow capture
+    order, so a random split would put neighbouring frames of the same road in both.
+    """
+    CLASSES = {"D00", "D10", "D20", "D40"}
+
+    def __init__(self, country="Norway", split="train", val_fraction=0.1, transform=None, root=RDD2022):
+        assert split in ("train", "val"), split
+        base = Path(root) / country / "train"
+        images = sorted((base / "images").glob("*.jpg"))
+        if not images:
+            raise FileNotFoundError(f"no images in {base / 'images'}")
+        n_val = max(1, round(len(images) * val_fraction))
+        images = images[-n_val:] if split == "val" else images[:-n_val]
+        self.items = [(p, base / "annotations" / "xmls" / f"{p.stem}.xml") for p in images]
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.items)
+
+    def __getitem__(self, i):
+        img_path, xml_path = self.items[i]
+        image = np.array(Image.open(img_path).convert("RGB"))
+        h, w = image.shape[:2]
+        mask = np.zeros((h, w), np.uint8)
+        for x0, y0, x1, y1 in rdd_boxes(xml_path, self.CLASSES):
+            mask[max(0, int(y0)):min(h, int(np.ceil(y1))), max(0, int(x0)):min(w, int(np.ceil(x1)))] = 1
         if self.transform:
             out = self.transform(image=image, mask=mask)
             image, mask = out["image"], out["mask"]
