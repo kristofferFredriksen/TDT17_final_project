@@ -95,7 +95,24 @@ Each entry: **Decision**, **Why**, **Alternatives**, and **Consequences / limita
     meaningful while precision and mAP are underestimates.
   - **Domain shift:** the NRD frames are 1280×720 video, a different camera from the RDD2022 Norway
     images (about 4040×2035). Performance on NRD measures cross-dataset generalisation.
-- **Open:** Look at what category 4 covers. It might be mostly transverse cracks or a mix.
+- **Visual check (`visualize_nrd.py`, baseline `yolo11s_640`):**
+  - **Category 4 is a mix,** not one hidden class. About a third of the boxes are wide strips across
+    the lane (36% have w/h > 2), which look like transverse cracks. The rest are patches and broken
+    edges along the shoulder, plus small isolated spots. It can't be mapped reliably to D10, which
+    confirms that class-agnostic evaluation is the right main metric.
+  - **NRD's D00 boxes follow a different convention from RDD's.** In RDD, D00 boxes are tall. In NRD,
+    0 of 17 are tall and 29% are wide, because annotators box a whole diagonal crack running along the
+    lane. A model that partly uses box shape to tell D00 from D10 will be confused by this.
+  - **NRD's D40 boxes are tiny:** a median shortest side of 9 px at native 1280×720, so about 4–5 px
+    at 640. That is too small at the baseline resolution.
+  - **The baseline mostly misses damage rather than boxing it differently.**
+    - At conf ≥ 0.25 it makes only 15 predictions across all 50 images.
+    - Of the 109 ground-truth boxes, 90 have no overlapping prediction, 7 have IoU below 0.1,
+      4 have IoU 0.1–0.5 and 8 have IoU ≥ 0.5.
+    - The hits it does make have low confidence (0.27–0.64), so the model is under-confident on this
+      domain.
+  - **The images themselves are a different domain:** the dashboard covers the bottom ~25% of each
+    frame, the light is flat overcast early spring with snow at the roadside, and the damage is subtle.
 
 ---
 
@@ -198,4 +215,8 @@ Each entry: **Decision**, **Why**, **Alternatives**, and **Consequences / limita
 - Subsample background images (D5).
 - Tiling for the large Norway images. Ultralytics 8.4.215 has a `tile` option, to be investigated.
 - RT-DETR as a transformer-based comparison.
-- Near-duplicate images across splits (D4 limitation).
+- Near-duplicate images across splits (D4 limitation). China_MotorBike scores suspiciously high
+  (baseline test mAP50 0.93, D40 recall 1.0, compared with 0.60 overall), which is worth checking for
+  near-duplicates between train and test.
+- NRD operating point: the model is under-confident on NRD, so for the customer, report recall and
+  precision at a lower confidence threshold, chosen on RDD val, alongside mAP.
