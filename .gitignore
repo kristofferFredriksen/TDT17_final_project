@@ -221,3 +221,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project: training outputs and weights (keep on /cluster/work, not in git)
+runs/
+outputs/
+wandb/
+*.pt
+*.pth
+slurm-*.out
