@@ -40,6 +40,8 @@ class PotholeMix:
 
     def __getitem__(self, i):
         img_path, mask_path, _ = self.items[i]
+        # Deliberately ignore EXIF orientation: crack500 masks match the raw pixels (verified).
+        # Don't add ImageOps.exif_transpose, and use cv2.IMREAD_IGNORE_ORIENTATION if switching to cv2.
         image = Image.open(img_path).convert("RGB")
         rgb = Image.open(mask_path).convert("RGB")
         if image.size != rgb.size:

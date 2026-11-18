@@ -229,3 +229,4 @@ wandb/
 *.pt
 *.pth
 slurm-*.out
+/data/
