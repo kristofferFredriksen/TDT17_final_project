@@ -230,3 +230,4 @@ wandb/
 *.pth
 slurm-*.out
 /data/
+logs/
