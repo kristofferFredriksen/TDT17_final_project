@@ -221,3 +221,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project: data, model weights and outputs stay on IDUN, not in git
+data/
+datasets/
+runs/
+logs/
+eda_out/
+*.pt
+*.onnx
+*.engine
+*.cache
+.DS_Store
