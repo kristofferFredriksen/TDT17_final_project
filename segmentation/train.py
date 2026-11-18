@@ -87,7 +87,10 @@ def load_config(path, overrides):
         k, v = kv.split("=", 1)
         if k not in cfg and k != "limit":
             raise KeyError(f"unknown config key: {k}")
-        cfg[k] = yaml.safe_load(v)
+        v = yaml.safe_load(v)
+        if isinstance(cfg.get(k), float) and isinstance(v, (int, str)):
+            v = float(v)  # YAML reads "1e-4" (no dot) as a string
+        cfg[k] = v
     return cfg
 
 
@@ -130,7 +133,7 @@ def main():
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=cfg["epochs"])
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 
-    best, t_start = -1.0, time.time()
+    best, best_epoch, t_start = -1.0, 0, time.time()
     with open(out / "metrics.csv", "w", newline="") as f:
         log = csv.DictWriter(f, ["epoch", "train_loss", "val_iou", "val_dice", "val_precision", "val_recall", "lr", "seconds"])
         log.writeheader()
@@ -157,11 +160,16 @@ def main():
             log.writerow(row); f.flush()
             print(row, flush=True)
             if val["iou"] > best:
-                best = val["iou"]
+                best, best_epoch = val["iou"], epoch
                 torch.save({"model": model.state_dict(), "config": cfg, "epoch": epoch}, out / "best.pt")
+            elif cfg.get("patience") and epoch - best_epoch >= cfg["patience"]:
+                print(f"early stop: no val IoU improvement for {cfg['patience']} epochs (best epoch {best_epoch})")
+                break
 
     summary = {  # for the sustainability section: GPU-hours x power = energy
         "best_val_iou": best,
+        "best_epoch": best_epoch,
+        "epochs_run": epoch,
         "train_seconds": round(time.time() - t_start, 1),
         "device": torch.cuda.get_device_name() if use_amp else device.type,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),

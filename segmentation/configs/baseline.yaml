@@ -8,6 +8,7 @@ max_long_side: 1024   # downscale-only; at 512 thin cracks shrink to ~1.5 px (se
 crop: 512
 
 epochs: 40
+patience: null       # no early stopping; best val-IoU checkpoint is kept
 batch_size: 8
 lr: 3.0e-4
 weight_decay: 1.0e-4
