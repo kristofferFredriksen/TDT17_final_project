@@ -10,6 +10,7 @@ Detect D00 (longitudinal), D10 (transverse), D20 (alligator) and D40 (pothole) w
 | `energy.py` | Turns the GPU power log into kWh and EV-km, appends to `experiments.csv` |
 | `evaluate.py` / `eval.slurm` | Evaluates models on the test split, per country, and on NorwegianRoadDamage |
 | `error_analysis_rdd.py` | Error analysis on the RDD test split: missed / boxed differently / wrong class / correct per country and class, found-rate by box size, false alarms, and example pages per country |
+| `duplicates_rdd.py` | Near-duplicate check between train and val/test (perceptual hashing), with a cross-country reference and example pairs |
 | `visualize_nrd.py` | Draws ground truth vs predictions on all 50 NRD images, and classifies each ground-truth box as missed / boxed differently / matched (runs on a laptop) |
 
 ## Data decisions

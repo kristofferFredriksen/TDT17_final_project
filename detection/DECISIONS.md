@@ -207,8 +207,67 @@ Each entry: **Decision**, **Why**, **Alternatives**, and **Consequences / limita
 | Run name | Slurm job | Model | imgsz | batch | CPUs | Notes |
 |---|---|---|---|---|---|---|
 | `yolo11s_640` | 26241819 | yolo11s.pt | 640 | 32 | 8 | Baseline, A100-PCIE-40GB, about 1:55 min per epoch. Early-stopped at epoch 96 (best: 76), 2.48 h, 0.49 kWh. Val: mAP50 0.602, mAP50-95 0.306. **Test: mAP50 0.596, mAP50-95 0.304** (D40 weakest: AP50 0.478, R 0.421) |
-| `yolo26s_640` | | yolo26s.pt | 640 | 32 | 16 | |
+| `yolo26s_640` | 26241980 | yolo26s.pt | 640 | 32 | 16 | A100-PCIE-40GB. Early-stopped at epoch 94 (best: 74), 2.85 h (about 1:49 min per epoch, 17% slower than the baseline despite 16 CPUs), 0.59 kWh. Val: mAP50 0.608, mAP50-95 0.313. **Test: mAP50 0.607, mAP50-95 0.310** (D40 AP50 0.492, D10 0.606) |
 | `yolo11s_1280` | 26241981 | yolo11s.pt | 1280 | 16 | 16 | 24 h time limit; about 5:10 min per epoch (about 3× the baseline), 16.1 GB GPU memory |
+
+## Findings from the error analysis (`error_analysis_rdd.py`, baseline, test split, conf ≥ 0.25)
+- **The main error is missed damage, not wrong class.**
+  - Wrong class is only 0.3–2.3% of boxes per country.
+  - "Boxed differently" (IoU 0.1–0.5) is a steady 11–14% everywhere. Crack extents are ambiguous,
+    which also explains the low mAP50-95 relative to mAP50.
+- **Box size explains most of Norway's weak result.**
+  - 21% of Norway's test boxes are under 8 px at the 640 px input (3.9% of them found), and another
+    29% are 8–16 px (21.8% found).
+  - At 16–64 px, Norway is as good as or better than Japan, India and Czech.
+  - This motivates the `yolo11s_1280` run. Prediction to verify: Norway's small-box found-rate goes up.
+- **Czech is hard at every box size** (16% / 27% / 43% found at 16–32 / 32–64 / ≥64 px), so its
+  problem is not size. Possible causes: windshield reflections, few training images (2,263), and 62%
+  background images.
+- **Main confusion is between D20 and D00** (28 D20 predicted as D00, 19 the other way): alligator
+  cracking contains longitudinal cracks. D00 and D10 are rarely confused (14 in total), so orientation
+  is learned.
+- **Few false alarms:** 0.04–0.13 per image, except the US at 0.27, which has no background images in
+  training. The model is conservative (precision > recall), so a lower confidence threshold could buy
+  recall cheaply.
+- **China_MotorBike finds 94% even of 8–16 px boxes,** which supports the near-duplicate suspicion (D4).
+
+**YOLO26s compared with YOLO11s (same analysis):**
+- The error profile is almost identical. The share of correct boxes per country moves by at most
+  ±1.7 points, in both directions (Norway 0.284 → 0.276, India 0.397 → 0.409).
+- **No small-object gain in Norway:**
+  - <8 px boxes: 3.9% → 5.9% found (8 → 12 of 205 boxes).
+  - 8–16 px boxes: 21.8% → 20.4% found.
+  - So YOLO26's advertised small-object improvement does not show up on this data at 640 px.
+- Slightly fewer false alarms in the US (0.27 → 0.22 per image).
+- **Conclusion:** changing the architecture does not change *what* goes wrong. The errors are driven
+  by the data (object size, domain, annotation style), which points to input resolution as the lever
+  to test next.
+
+**Visual check of the example pages (`examples_<country>.jpg`):**
+- **China_MotorBike:**
+  - The camera points at the road surface from close range, so cracks are large and sharp.
+  - Three of the six sampled test images (000414, 001049, 001474) show the same stretch of bike lane
+    with the same cracks. That is visual evidence of near-duplicate images, probably also across
+    train and test.
+- **Annotation granularity differs.**
+  - Norway often splits one long crack into many short boxes (Norway_007434: 8 small D00 boxes along
+    one crack, 0 predictions).
+  - China_MotorBike and the US usually use one box per crack.
+  - A model can't match both conventions, which feeds the "boxed differently" outcome and lowers
+    mAP50-95.
+- **Norway:**
+  - The images are wide panoramas, and the road is a thin strip at the bottom, so damage further
+    ahead becomes tiny.
+  - Many conditions appear: shadows, wet asphalt, snow.
+- **Czech:** a dotted windshield band across the top of every image. Transverse cracks are faint in
+  overcast light and often missed (2 of the 6 sampled images have no predictions).
+- **India:**
+  - D40 boxes are often large, shallow depressions or broken areas, unlike Norway's small potholes,
+    so D40 looks very different from country to country.
+  - Large D20 areas are boxed with varying extents. The images are hazy and dusty.
+- **United States:** Google Street View in good light, with many correct matches. Some "false alarms"
+  look like real cracks that were never labelled, so the ground truth itself has gaps (label noise).
+  This can't be verified without re-labelling.
 
 ## Open questions / possible next steps
 - Visually inspect NRD category 4.
