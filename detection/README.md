@@ -8,6 +8,7 @@ Detect D00 (longitudinal), D10 (transverse), D20 (alligator) and D40 (pothole) w
 | `eda_rdd.py` | Plots and tables for the data analysis (reads only the CSVs, runs in seconds) |
 | `train.slurm` | Trains a YOLO model on IDUN, evaluates on the test split, logs GPU energy |
 | `energy.py` | Turns the GPU power log into kWh and EV-km, appends to `experiments.csv` |
+| `evaluate.py` / `eval.slurm` | Evaluates models on the test split, per country, and on NorwegianRoadDamage |
 
 ## Data decisions
 
@@ -56,3 +57,22 @@ mkdir -p logs
 
 Results land in `/cluster/work/$USER/tdt17/runs/<name>/`, energy per run in
 `/cluster/work/$USER/tdt17/energy/experiments.csv`.
+
+4. Evaluate one or more finished runs (GPU job, minutes):
+
+   ```bash
+   sbatch --export=ALL,RUNS="yolo11s_640 yolo26s_640" detection/eval.slurm
+   ```
+
+   Rows are appended to `/cluster/work/$USER/tdt17/eval/results.csv`; PR curves and confusion
+   matrices per model and set are saved next to it.
+
+## Evaluation on NorwegianRoadDamage
+
+Most NRD annotations (84 of 109) have the generic class "Norwegian-Road-Damage-Masks", only
+17 D00, 4 D20 and 4 D40 boxes are labelled with a class, and there are no D10 boxes. So NRD is
+reported two ways, on all 50 images (train and test together, since we never train on NRD):
+
+- `nrd_agnostic`: every box is "damage" and predictions match regardless of class. Main customer metric.
+- `nrd_perclass`: only the D00/D20/D40 boxes. Predictions on the generic regions count as false
+  positives, so per-class recall is meaningful but precision and mAP are underestimates.

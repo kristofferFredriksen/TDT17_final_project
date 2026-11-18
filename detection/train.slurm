@@ -23,6 +23,10 @@ BATCH=${BATCH:-32}
 NAME=${NAME:-${MODEL%.pt}_${IMGSZ}}
 EXTRA=${EXTRA:-}
 
+# Show the run name instead of "rdd-yolo" in squeue/sacct. To also get it in the log file name,
+# submit with: sbatch -J <name> ...
+scontrol update JobId="$SLURM_JOB_ID" JobName="$NAME" 2>/dev/null || true
+
 WORK=/cluster/work/$USER/tdt17
 DATA=$WORK/rdd_yolo/rdd.yaml
 RUNS=$WORK/runs
