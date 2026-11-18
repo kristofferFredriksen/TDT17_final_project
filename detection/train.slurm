@@ -3,12 +3,13 @@
 #SBATCH --account=share-ie-idi
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=16
 #SBATCH --mem=32G
 #SBATCH --time=12:00:00
 #SBATCH --output=logs/%x-%j.out
 
 # Trains a YOLO detector on RDD2022, evaluates it on our test split, and logs GPU energy.
+# Validation uses twice as many dataloader workers as training, hence workers = CPUs / 2.
 # Submit from the repo root. Settings can be overridden without editing this file, e.g.:
 #   sbatch --export=ALL,MODEL=yolo11m.pt,IMGSZ=1024,BATCH=16 detection/train.slurm
 #   sbatch --export=ALL,NAME=no_mosaic,EXTRA="mosaic=0" detection/train.slurm
@@ -42,7 +43,7 @@ nvidia-smi --query-gpu=timestamp,name,power.draw,utilization.gpu,memory.used \
 SMI_PID=$!
 
 yolo detect train data="$DATA" model="$MODEL" imgsz="$IMGSZ" epochs="$EPOCHS" batch="$BATCH" \
-    workers="$SLURM_CPUS_PER_TASK" project="$RUNS" name="$NAME" exist_ok=True \
+    workers=$((SLURM_CPUS_PER_TASK / 2)) project="$RUNS" name="$NAME" exist_ok=True \
     seed=0 deterministic=True patience=20 $EXTRA
 
 kill $SMI_PID
