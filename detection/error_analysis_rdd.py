@@ -49,11 +49,16 @@ def outcome(best_iou, same_class):
 
 
 def predict_all(model, paths, imgsz, conf, batch):
+    # Ultralytics decodes every image of a list source up front (about 25 MB per Norway image), so a
+    # list of 3,599 paths runs out of RAM. Feeding one batch-sized chunk at a time keeps memory flat.
     preds = {}
-    for res in model.predict(paths, imgsz=imgsz, conf=conf, batch=batch, stream=True, verbose=False):
-        preds[Path(res.path).stem] = [
-            {"label": CLASSES[int(c)], "conf": float(s), "box": tuple(b)}
-            for b, c, s in zip(res.boxes.xyxy.tolist(), res.boxes.cls.tolist(), res.boxes.conf.tolist())]
+    for i in range(0, len(paths), batch):
+        for res in model.predict(paths[i:i + batch], imgsz=imgsz, conf=conf, batch=batch, verbose=False):
+            preds[Path(res.path).stem] = [
+                {"label": CLASSES[int(c)], "conf": float(s), "box": tuple(b)}
+                for b, c, s in zip(res.boxes.xyxy.tolist(), res.boxes.cls.tolist(), res.boxes.conf.tolist())]
+        if i // batch % 20 == 0:
+            print(f"  {min(i + batch, len(paths))}/{len(paths)} images", flush=True)
     return preds
 
 
