@@ -1,0 +1,4 @@
+run,arch,encoder,best_epoch,pm_test_iou,pm_test_dice,pm_test_precision,pm_test_recall,nrd_iou,nrd_dice,nrd_precision,nrd_recall,nrd_region_recall,nrd_image_accuracy,nrd_ms_per_image,device
+unet_r34_baseline_20261118-115857,Unet,resnet34,30,0.5466,0.7069,0.6795,0.7366,0.0031,0.0063,0.0033,0.055,0.15,0.9,12.2,NVIDIA A100-PCIE-40GB
+segformer_b2_20261118-115857,Segformer,mit_b2,32,0.5678,0.7243,0.7221,0.7265,0.0016,0.0033,0.0025,0.0047,0.0083,0.4,21.1,NVIDIA A100-PCIE-40GB
+unet_r34_long_20261118-122239,Unet,resnet34,40,0.5231,0.6869,0.6725,0.702,0.0018,0.0035,0.0022,0.009,0.025,0.56,10.7,NVIDIA A100-PCIE-40GB
