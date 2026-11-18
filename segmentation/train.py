@@ -21,6 +21,7 @@ import yaml
 from albumentations.pytorch import ToTensorV2
 from torch.utils.data import DataLoader, Subset
 
+from common.paths import DATA_ROOT
 from segmentation.dataset import PotholeMix
 
 REPO = Path(__file__).resolve().parent.parent
@@ -101,6 +102,9 @@ def main():
     ap.add_argument("--set", nargs="*", default=[], help="override config values, e.g. epochs=1 lr=1e-4")
     args = ap.parse_args()
     cfg = load_config(args.config, args.set)
+    marker = DATA_ROOT / "preshrunk.json"
+    if marker.exists() and cfg["max_long_side"] > json.loads(marker.read_text())["max_long_side"]:
+        raise ValueError(f"max_long_side={cfg['max_long_side']} but {DATA_ROOT} is pre-shrunk smaller; use the original data")
 
     random.seed(cfg["seed"]); np.random.seed(cfg["seed"]); torch.manual_seed(cfg["seed"])
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
