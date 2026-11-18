@@ -48,44 +48,54 @@ def load(ckpt_path, device):
 
 
 @torch.no_grad()
-def eval_nrd(model, ds, device, fig_path):
-    tp = fp = fn = regions = hits = 0
-    img = {"tp": 0, "fp": 0, "fn": 0, "tn": 0}
-    times, shown = [], []
-    for i in range(len(ds)):
+def nrd_predict(model, ds, device, indices=None):
+    """[(x, gt, pred)] for the given NRD indices, plus per-image inference times (s, first call skipped)."""
+    records, times = [], []
+    for k, i in enumerate(range(len(ds)) if indices is None else indices):
         x, y = ds[i]
         t0 = time.perf_counter()
         p = (torch.sigmoid(predict(model, x[None].to(device)))[0, 0] > 0.5).cpu().numpy()  # .cpu() syncs the GPU
-        if i:  # skip the first call (warm-up)
+        if k:
             times.append(time.perf_counter() - t0)
-        g = y.numpy() > 0
+        records.append((x, y.numpy() > 0, p))
+    return records, times
+
+
+def nrd_metrics(records, times, fig_path, title="NRD zero-shot"):
+    """Micro pixel metrics + region recall + image-level accuracy over all records, and an example figure."""
+    tp = fp = fn = regions = hits = 0
+    img = {"tp": 0, "fp": 0, "fn": 0, "tn": 0}
+    for _, g, p in records:
         tp += int((p & g).sum()); fp += int((p & ~g).sum()); fn += int((~p & g).sum())
         n, h = region_hits(g, p)
         regions += n; hits += h
         pred_pos, gt_pos = p.mean() >= IMAGE_MIN_FRACTION, g.any()
         img[{(1, 1): "tp", (1, 0): "fp", (0, 1): "fn", (0, 0): "tn"}[(int(pred_pos), int(gt_pos))]] += 1
-        shown.append((g.mean(), x, g, p))
 
     eps = 1e-9
     metrics = {
         "iou": tp / (tp + fp + fn + eps), "dice": 2 * tp / (2 * tp + fp + fn + eps),
         "precision": tp / (tp + fp + eps), "recall": tp / (tp + fn + eps),
         "region_recall": hits / max(regions, 1), "regions": regions,
-        "image_accuracy": (img["tp"] + img["tn"]) / len(ds), "image_confusion": img,
+        "image_accuracy": (img["tp"] + img["tn"]) / len(records), "image_confusion": img,
         "ms_per_image": 1000 * float(np.mean(times)) if times else None,
     }
 
     # Qualitative figure: the 6 images with most labelled damage + 2 without any.
-    shown.sort(key=lambda s: -s[0])
-    pick = shown[:6] + [s for s in shown if s[0] == 0][:2]
+    shown = sorted(records, key=lambda r: -r[1].mean())
+    pick = shown[:6] + [r for r in shown if not r[1].any()][:2]
     fig, axes = plt.subplots(2, 4, figsize=(18, 6))
-    for ax, (_, x, g, p) in zip(axes.flat, pick):
+    for ax, (x, g, p) in zip(axes.flat, pick):
         rgb = np.clip(x.permute(1, 2, 0).numpy() * STD + MEAN, 0, 1)
         rgb[p] = 0.5 * rgb[p] + 0.5 * np.array([1, 0, 0])
         ax.imshow(rgb); ax.contour(g, levels=[0.5], colors="lime", linewidths=1); ax.axis("off")
-    fig.suptitle("NRD zero-shot: prediction in red, label outline in green (last two: no labelled damage)")
+    fig.suptitle(f"{title}: prediction in red, label outline in green (last two: no labelled damage)")
     plt.tight_layout(); plt.savefig(fig_path, dpi=110); plt.close(fig)
     return metrics
+
+
+def eval_nrd(model, ds, device, fig_path):
+    return nrd_metrics(*nrd_predict(model, ds, device), fig_path)
 
 
 def main():

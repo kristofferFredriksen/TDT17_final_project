@@ -116,7 +116,7 @@ def main():
     out = Path(os.environ.get("OUT_ROOT", REPO / "runs")) / f"{cfg['name']}_{time.strftime('%Y%m%d-%H%M%S')}"
     out.mkdir(parents=True)
     (out / "config.yaml").write_text(yaml.safe_dump(cfg))
-    print(f"device={device} out={out}")
+    print(f"device={device} data={DATA_ROOT} out={out}")
 
     train_ds = limited(PotholeMix("training", transform=Transform(cfg["max_long_side"], cfg["crop"])), cfg.get("limit"))
     val_ds = limited(PotholeMix("validation", transform=Transform(cfg["max_long_side"])), cfg.get("limit"))
@@ -173,6 +173,7 @@ def main():
         "train_seconds": round(time.time() - t_start, 1),
         "device": torch.cuda.get_device_name() if use_amp else device.type,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
+        "data_root": str(DATA_ROOT),
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2))
     print(summary)
