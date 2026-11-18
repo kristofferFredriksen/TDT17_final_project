@@ -12,9 +12,9 @@
 #SBATCH --time=12:00:00
 #SBATCH --output=slurm-%j.out
 
-set -euo pipefail
 eval "$(conda shell.bash hook)"
 conda activate tdt17
+set -euo pipefail   # after activate: conda's activate scripts reference unset variables
 
 export OUT_ROOT=/cluster/work/$USER/tdt17/runs
 mkdir -p "$OUT_ROOT"
