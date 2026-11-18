@@ -7,6 +7,7 @@
 #SBATCH --account=share-ie-idi       # check yours with: sacctmgr show assoc user=$USER format=account
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
+#SBATCH --constraint=a100           # torch build needs compute capability >= 7.5 (no P100/V100); same GPU type keeps energy numbers comparable
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=12:00:00
