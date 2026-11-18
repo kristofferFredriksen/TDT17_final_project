@@ -173,6 +173,16 @@ Each entry: **Decision**, **Why**, **Alternatives**, and **Consequences / limita
   A possible fix is `cache=ram` (decoded images kept in RAM, about 30 GB at 640 px, so it needs
   `--mem=64G`) or copying the data to the node's local disk.
 
+### S3. Train only on A100s
+- **Observation:** IDUN's GPUQ mixes P100, V100, A100, H100 and H200 nodes. An evaluation job landed
+  on a V100 (compute capability 7.0) and crashed: our PyTorch build (CUDA 13) only supports compute
+  capability 7.5 and newer.
+- **Decision:**
+  - Training jobs: `--constraint=a100`.
+  - Evaluation jobs: `--constraint="a100|h100|h200"`.
+- **Why A100 only for training:** Besides compatibility, using one GPU type makes training time and
+  energy directly comparable between runs.
+
 ---
 
 ## Run log

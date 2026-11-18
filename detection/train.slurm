@@ -3,12 +3,15 @@
 #SBATCH --account=share-ie-idi
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
+#SBATCH --constraint=a100
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=32G
 #SBATCH --time=12:00:00
 #SBATCH --output=logs/%x-%j.out
 
 # Trains a YOLO detector on RDD2022, evaluates it on our test split, and logs GPU energy.
+# Restricted to A100s: our PyTorch (CUDA 13) does not support the P100/V100 nodes, and using one GPU
+# type keeps training time and energy comparable between runs.
 # Validation uses twice as many dataloader workers as training, hence workers = CPUs / 2.
 # Submit from the repo root. Settings can be overridden without editing this file, e.g.:
 #   sbatch --export=ALL,MODEL=yolo11m.pt,IMGSZ=1024,BATCH=16 detection/train.slurm

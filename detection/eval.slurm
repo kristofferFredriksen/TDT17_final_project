@@ -3,13 +3,15 @@
 #SBATCH --account=share-ie-idi
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
+#SBATCH --constraint="a100|h100|h200"
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=02:00:00
 #SBATCH --output=logs/%x-%j.out
 
 # Evaluates one or more trained models on the RDD2022 test split (all and per country) and on
-# NorwegianRoadDamage. Submit from the repo root, with run names from /cluster/work/$USER/tdt17/runs:
+# NorwegianRoadDamage. Our PyTorch (CUDA 13) does not support the P100/V100 nodes, hence the constraint.
+# Submit from the repo root, with run names from /cluster/work/$USER/tdt17/runs:
 #   sbatch --export=ALL,RUNS="yolo11s_640 yolo26s_640" detection/eval.slurm
 
 set -eo pipefail
