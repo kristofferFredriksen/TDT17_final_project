@@ -23,7 +23,7 @@ from torch.utils.data import DataLoader, Subset
 
 from segmentation.dataset import NorwegianRoadDamage
 from segmentation.evaluate import append_row, nrd_metrics, nrd_predict
-from segmentation.train import REPO, Transform
+from segmentation.train import DEVICE, REPO, Transform
 
 
 def video_of(path):
@@ -72,7 +72,7 @@ def main():
     ap.add_argument("--max-folds", type=int, default=None, help="only for smoke tests")
     args = ap.parse_args()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    device = DEVICE
     ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     cfg = ckpt["config"]
     run = args.checkpoint.parent
@@ -82,7 +82,9 @@ def main():
 
     train_ds = NorwegianRoadDamage(transform=Transform(cfg["max_long_side"], cfg["crop"]))
     eval_ds = NorwegianRoadDamage(transform=Transform(cfg["max_long_side"]))
-    videos = sorted({video_of(p) for p, *_ in eval_ds.items})[:args.max_folds]
+    videos = sorted({video_of(p) for p, *_ in eval_ds.items})
+    assert len(videos) == 6, f"expected 6 NRD videos, got {len(videos)}: file names changed? (see video_of)"
+    videos = videos[:args.max_folds]
 
     records, times, folds, t_start = [], [], [], time.time()
     for v in videos:

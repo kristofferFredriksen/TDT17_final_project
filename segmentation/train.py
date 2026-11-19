@@ -26,6 +26,7 @@ from segmentation.dataset import PotholeMix, RDD2022Boxes
 from segmentation.losses import box_projection_loss
 
 REPO = Path(__file__).resolve().parent.parent
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 
 class Transform:
@@ -114,12 +115,9 @@ def main():
     ap.add_argument("--set", nargs="*", default=[], help="override config values, e.g. epochs=1 lr=1e-4")
     args = ap.parse_args()
     cfg = load_config(args.config, args.set)
-    marker = DATA_ROOT / "preshrunk.json"
-    if marker.exists() and cfg["max_long_side"] > json.loads(marker.read_text())["max_long_side"]:
-        raise ValueError(f"max_long_side={cfg['max_long_side']} but {DATA_ROOT} is pre-shrunk smaller; use the original data")
 
     random.seed(cfg["seed"]); np.random.seed(cfg["seed"]); torch.manual_seed(cfg["seed"])
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    device = DEVICE
     use_amp = device.type == "cuda"
 
     out = Path(os.environ.get("OUT_ROOT", REPO / "runs")) / f"{cfg['name']}_{time.strftime('%Y%m%d-%H%M%S')}"
@@ -204,6 +202,7 @@ def main():
         "train_seconds": round(time.time() - t_start, 1),
         "device": torch.cuda.get_device_name() if use_amp else device.type,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
+        "power_log": os.environ.get("POWER_LOG"),  # set by scripts/train_gpu.sh (non-slurm runs)
         "data_root": str(DATA_ROOT),
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2))

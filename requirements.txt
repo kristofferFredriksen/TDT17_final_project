@@ -4,6 +4,8 @@ torch>=2.4  # older torch (e.g. 2.2 on Intel/Rosetta Python) breaks with NumPy 2
 segmentation-models-pytorch==0.6.0
 albumentations==2.0.8
 pyyaml
+scipy  # direct imports; also pulled in by albumentations
+opencv-python-headless
 numpy
 pillow
 # EDA notebook

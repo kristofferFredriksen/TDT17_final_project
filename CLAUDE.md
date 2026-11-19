@@ -15,7 +15,7 @@ Last updated 2026-11-19. **Deadline: Fri 2026-11-27 23:59** (14-min video for th
 - Short conventional commits (`feat(seg): ...`, `fix(slurm): ...`, `results(seg): ...`).
 - Never commit data, checkpoints or logs (`/data/`, `runs/`, `logs/`, `*.pt`, `slurm-*.out` are gitignored).
   Commit small results only: `results/segmentation/*.csv` and figures.
-- Each new script gets a small assert-based test (`segmentation/test_*.py`, run as `python3 -m segmentation.test_x`).
+- No new unit tests needed: a short smoke run (`--set limit=16 epochs=1`) is enough to check new code.
 
 ## Repo layout
 ```
@@ -26,7 +26,6 @@ segmentation/
   losses.py                  box projection loss (BoxInst-style) for box-labelled data
   evaluate.py                Pothole-Mix test (overall + per subset) + NRD zero-shot; appends results CSV
   finetune_nrd.py            leave-one-video-out (LOVO) fine-tuning on NRD, pooled over all 50 images
-  preshrink.py               copy of Pothole-Mix capped at 1024 px (speed/storage; same model input)
   run_stats.py               per-run speed, GPU util, power, energy (from power_<jobid>.csv)
   configs/*.yaml             baseline (U-Net R34), segformer_b2, unet_r34_long (early stop),
                              unet_r34_rdd_norway (stage 2, filled boxes), unet_r34_rdd_norway_proj (stage 2, projection loss)

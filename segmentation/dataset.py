@@ -69,7 +69,8 @@ def polygons_to_mask(segmentation, height, width):
 class NorwegianRoadDamage:
     """All NRD images (train+test merged) as a binary damage eval set.
 
-    The official split leaks (same videos in both), so we only use NRD zero-shot.
+    The official split leaks (same videos in both), so we use NRD zero-shot (evaluate.py) and
+    leave-one-video-out (finetune_nrd.py) instead.
     """
 
     def __init__(self, transform=None, root=NRD):
