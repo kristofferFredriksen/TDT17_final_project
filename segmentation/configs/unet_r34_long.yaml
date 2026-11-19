@@ -1,0 +1,18 @@
+# Baseline U-Net, trained longer with early stopping. Meant for the pre-shrunk data and 16 CPUs:
+#   DATA_ROOT=/cluster/work/$USER/tdt17/data_1024 CONFIG=segmentation/configs/unet_r34_long.yaml \
+#     sbatch --cpus-per-task=16 --mem=48G slurm/seg_train.slurm
+name: unet_r34_long
+arch: Unet
+encoder: resnet34
+encoder_weights: imagenet
+
+max_long_side: 1024
+crop: 512
+
+epochs: 100           # upper bound; cosine LR decays over all 100, so a stop at epoch ~40 happens at a higher LR than the 40-epoch baseline
+patience: 10          # stop after 10 epochs without a new best val IoU
+batch_size: 8
+lr: 3.0e-4
+weight_decay: 1.0e-4
+num_workers: 16
+seed: 0

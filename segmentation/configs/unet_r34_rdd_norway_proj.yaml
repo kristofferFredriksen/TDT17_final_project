@@ -1,0 +1,25 @@
+# Stage 2 with the box projection loss instead of filled boxes (see segmentation/losses.py).
+# Same as unet_r34_rdd_norway.yaml otherwise. Keeps the LAST epoch (val IoU vs filled boxes would reward filling).
+# Stage 2: continue the Pothole-Mix U-Net on RDD2022-Norway,
+# so the model sees Norwegian roads and everything around them (sky, snow, rails, bonnet).
+# Pass the stage-1 checkpoint on the command line:
+#   CONFIG=segmentation/configs/unet_r34_rdd_norway_proj.yaml sbatch slurm/seg_train.slurm \
+#     --set init_checkpoint=/cluster/work/$USER/tdt17/runs/<pothole-mix run>/best.pt
+name: unet_r34_rdd_norway_proj
+arch: Unet
+encoder: resnet34
+encoder_weights: imagenet   # ignored when init_checkpoint is set
+dataset: rdd_norway
+box_loss: projection        # BoxInst-style: background outside boxes + row/column projections, no fill
+init_checkpoint: null
+
+max_long_side: 1024
+crop: 512
+
+epochs: 15
+patience: null
+batch_size: 8
+lr: 1.0e-4                  # lower than stage 1: fine-tuning, not training from scratch
+weight_decay: 1.0e-4
+num_workers: 8
+seed: 0

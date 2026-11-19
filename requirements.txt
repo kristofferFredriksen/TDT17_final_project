@@ -1,0 +1,12 @@
+# Segmentation. Tested 2026-11-18 with Python 3.11 and torch 2.15.0.
+# torch only has a floor so pip picks a wheel that matches the machine (CUDA on IDUN, MPS on Mac).
+torch>=2.4  # older torch (e.g. 2.2 on Intel/Rosetta Python) breaks with NumPy 2 and lacks torch.amp.GradScaler
+segmentation-models-pytorch==0.6.0
+albumentations==2.0.8
+pyyaml
+numpy
+pillow
+# EDA notebook
+matplotlib
+pandas
+jupyter
