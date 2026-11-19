@@ -1,3 +1,6 @@
-run,base,arch,encoder,init,steps,lr,folds,nrd_iou,nrd_dice,nrd_precision,nrd_recall,nrd_region_recall,nrd_image_accuracy,seconds
-lovo_unet_r34_baseline_20261118-115857_pothole_mix_20261118-135830,unet_r34_baseline_20261118-115857,Unet,resnet34,pothole_mix,600,0.0001,6,0.3354,0.5023,0.5922,0.4361,0.7,0.88,404.2
-lovo_unet_r34_baseline_20261118-115857_imagenet_20261118-140540,unet_r34_baseline_20261118-115857,Unet,resnet34,imagenet,600,0.0001,6,0.2868,0.4458,0.3987,0.5055,0.7167,0.94,401.1
+run,base,arch,encoder,init,steps,lr,folds,nrd_iou,nrd_dice,nrd_precision,nrd_recall,nrd_region_recall,nrd_image_accuracy,seconds,seed,nrd_miou_img,nrd_area_pct_gt,nrd_area_pct_pred,nrd_area_pct_mae
+lovo_unet_r34_baseline_20261118-115857_pothole_mix_20261118-135830,unet_r34_baseline_20261118-115857,Unet,resnet34,pothole_mix,600,0.0001,6,0.3354,0.5023,0.5922,0.4361,0.7,0.88,404.2,,,,,
+lovo_unet_r34_baseline_20261118-115857_imagenet_20261118-140540,unet_r34_baseline_20261118-115857,Unet,resnet34,imagenet,600,0.0001,6,0.2868,0.4458,0.3987,0.5055,0.7167,0.94,401.1,,,,,
+lovo_unet_r34_rdd_norway_proj_20261119-102625_pothole_mix_20261119-105553,unet_r34_rdd_norway_proj_20261119-102625,Unet,resnet34,pothole_mix,600,0.0001,6,0.36,0.5294,0.5786,0.4879,0.6583,0.9,197.3,0,0.3672,0.5468,0.4611,0.2729
+lovo_unet_r34_rdd_norway_proj_20261119-102625_pothole_mix_20261119-105913,unet_r34_rdd_norway_proj_20261119-102625,Unet,resnet34,pothole_mix,600,0.0001,6,0.3536,0.5225,0.5762,0.4779,0.65,0.86,198.5,1,0.3632,0.5468,0.4535,0.2783
+lovo_unet_r34_rdd_norway_proj_20261119-102625_pothole_mix_20261119-110234,unet_r34_rdd_norway_proj_20261119-102625,Unet,resnet34,pothole_mix,600,0.0001,6,0.3379,0.5051,0.5569,0.4621,0.6333,0.88,198.6,2,0.3515,0.5468,0.4537,0.3082
