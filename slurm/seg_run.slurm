@@ -10,7 +10,7 @@
 #SBATCH --constraint=a100           # torch build needs compute capability >= 7.5 (no P100/V100); same GPU type keeps energy numbers comparable
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=24G
-#SBATCH --time=01:00:00
+#SBATCH --time=00:30:00             # evaluate ~4 min per checkpoint, finetune_nrd ~7-11 min; short limits start sooner (backfill)
 #SBATCH --output=slurm-run-%j.out
 
 eval "$(conda shell.bash hook)"
