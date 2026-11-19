@@ -150,7 +150,7 @@ Improvements: label more Norwegian frames, or use the paper's approach of SAM-3 
 
 **Say**
 
-I logged GPU power for every run. Each stage-1 model used under 0.12 kilowatt-hours; the three Pothole-Mix runs together used about **0.28 kWh**, roughly **1.5 km in an electric car**. Fine-tuning on the customer's data takes about 7 minutes per seed.
+I logged GPU power for every training run on IDUN's A100s. Each model used under 0.12 kilowatt-hours; the three Pothole-Mix runs plus the stage-2 run together used about **0.34 kWh**, roughly **2 km in an electric car**. Fine-tuning on the customer's data takes a few minutes per seed.
 
 At inference, the U-Net needs about **12 ms per image** on an A100 and 4 ms on an RTX 5090. The paper's SAM-3 pipeline has 473 million parameters and needs 457 ms per image, about 20 times the size and 40 times slower. SegFormer was no better than U-Net but used more energy, so I recommend the **U-Net**.
 
@@ -161,9 +161,11 @@ At inference, the U-Net needs about **12 ms per image** on an A100 and 4 ms on a
 | U-Net stage 1 | 0.071 kWh | |
 | SegFormer-B2 stage 1 | 0.119 kWh | +68% for no NRD gain |
 | U-Net long run | 0.085 kWh | |
+| U-Net stage 2, RDD2022 Norway (filled boxes) | 0.066 kWh | |
+| **Total training** | **0.341 kWh** | ≈ 1.9 km in an EV |
 | Inference: U-Net vs SAM-3 pipeline | 12 ms vs 457 ms / image | 24 M vs 473 M params |
 
-> GPU only, A100 on IDUN. Stage 2 with filled boxes: 0.066 kWh (A100). **TODO:** the 5090 energy for the projection run is too high (it shared the GPU with another run): rerun it alone or leave it out. LOVO energy was not logged (~3.5 min per seed on the 5090). EV figure uses ~0.18 kWh/km, the same factor as the detection part.
+> GPU only, A100 on IDUN (`python3 -m segmentation.run_stats runs`). Not included: the projection-loss stage 2 (run on the RTX 5090 while it shared the GPU with another run, so its power log is not usable), LOVO fine-tuning and evaluation (no power logging; ~3.5 min per LOVO seed on the 5090). EV figure uses ~0.18 kWh/km, the same factor as the detection part.
 
 ---
 
