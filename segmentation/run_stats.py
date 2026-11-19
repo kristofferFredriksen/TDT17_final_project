@@ -3,7 +3,8 @@
     python3 -m segmentation.run_stats                      # runs in $OUT_ROOT or /cluster/work/$USER/tdt17/runs
     python3 -m segmentation.run_stats path/to/runs
 
-Power/utilisation come from the power_<jobid>.csv written by slurm/seg_train.slurm (sampled every 30 s).
+Power/utilisation come from the power_<jobid>.csv written by slurm/seg_train.slurm, or for non-slurm runs the
+log scripts/train_gpu.sh writes (path in summary.json). Sampled every 30 s.
 """
 import csv
 import json
@@ -37,9 +38,12 @@ def main():
         summary = json.loads((run / "summary.json").read_text()) if (run / "summary.json").exists() else {}
         secs = [float(e["seconds"]) for e in epochs]
         job = summary.get("slurm_job_id")
-        util, watts = power_stats(root / f"power_{job}.csv") if job and (root / f"power_{job}.csv").exists() else (None, None)
+        log = root / f"power_{job}.csv" if job else Path(summary["power_log"]) if summary.get("power_log") else None
+        util, watts = power_stats(log) if log and log.exists() else (None, None)
         train_s = summary.get("train_seconds", sum(secs))
         best = max(epochs, key=lambda e: float(e["val_iou"])) if epochs else None
+        if "best_epoch" in summary:  # the saved checkpoint (projection runs keep the last epoch, not the best)
+            best = epochs[summary["best_epoch"] - 1]
         rows.append({
             "run": run.name, "job": job or "-", "workers": cfg["num_workers"], "epochs": len(epochs),
             "s/epoch": np.mean(secs[1:] or secs),  # skip epoch 1 (start-up)

@@ -23,7 +23,7 @@ from scipy import ndimage
 from torch.utils.data import DataLoader, Subset
 
 from segmentation.dataset import NorwegianRoadDamage, PotholeMix
-from segmentation.train import REPO, Transform, evaluate, predict
+from segmentation.train import DEVICE, REPO, Transform, evaluate, predict
 
 MEAN, STD = np.array([0.485, 0.456, 0.406]), np.array([0.229, 0.224, 0.225])  # A.Normalize defaults
 REGION_MIN_COVER = 0.05   # an NRD region counts as found if >= 5% of its pixels are predicted (labels are loose polygons)
@@ -120,7 +120,7 @@ def main():
     ap.add_argument("checkpoints", nargs="+")
     ap.add_argument("--num-workers", type=int, default=4)
     args = ap.parse_args()
-    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+    device = DEVICE
 
     for ckpt_path in map(Path, args.checkpoints):
         model, cfg, epoch = load(ckpt_path, device)

@@ -10,7 +10,8 @@ cd "$(dirname "$0")/.."
 mkdir -p logs
 TAG="$(basename "$CONFIG" .yaml)_gpu${GPU}_$(date +%Y%m%d-%H%M%S)"
 
-nvidia-smi -i "$GPU" --query-gpu=timestamp,name,power.draw,utilization.gpu,memory.used --format=csv -l 30 > "logs/power_$TAG.csv" &
+export POWER_LOG="$PWD/logs/power_$TAG.csv"  # train.py records it in summary.json for run_stats
+nvidia-smi -i "$GPU" --query-gpu=timestamp,name,power.draw,utilization.gpu,memory.used --format=csv -l 30 > "$POWER_LOG" &
 POWER_PID=$!
 
 # The power logger is stopped when training ends, whether it succeeds or fails.
