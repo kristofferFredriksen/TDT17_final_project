@@ -237,3 +237,5 @@ wandb/
 *.cache
 slurm-*.out
 .DS_Store
+/data/
+logs/

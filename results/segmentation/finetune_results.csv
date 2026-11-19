@@ -1,0 +1,3 @@
+run,base,arch,encoder,init,steps,lr,folds,nrd_iou,nrd_dice,nrd_precision,nrd_recall,nrd_region_recall,nrd_image_accuracy,seconds
+lovo_unet_r34_baseline_20261118-115857_pothole_mix_20261118-135830,unet_r34_baseline_20261118-115857,Unet,resnet34,pothole_mix,600,0.0001,6,0.3354,0.5023,0.5922,0.4361,0.7,0.88,404.2
+lovo_unet_r34_baseline_20261118-115857_imagenet_20261118-140540,unet_r34_baseline_20261118-115857,Unet,resnet34,imagenet,600,0.0001,6,0.2868,0.4458,0.3987,0.5055,0.7167,0.94,401.1
