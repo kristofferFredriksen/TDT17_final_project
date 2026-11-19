@@ -337,13 +337,29 @@ Each entry: **Decision**, **Why**, **Alternatives**, and **Consequences / limita
   look like real cracks that were never labelled, so the ground truth itself has gaps (label noise).
   This can't be verified without re-labelling.
 
-## Open questions / possible next steps
-- Visually inspect NRD category 4.
-- Subsample background images (D5).
-- Tiling for the large Norway images. Ultralytics 8.4.215 has a `tile` option, to be investigated.
-- RT-DETR as a transformer-based comparison.
-- Near-duplicate images across splits (D4 limitation). China_MotorBike scores suspiciously high
-  (baseline test mAP50 0.93, D40 recall 1.0, compared with 0.60 overall), which is worth checking for
-  near-duplicates between train and test.
-- NRD operating point: the model is under-confident on NRD, so for the customer, report recall and
-  precision at a lower confidence threshold, chosen on RDD val, alongside mAP.
+## Status of open questions
+
+**Answered**
+- *What is NRD category 4?* A mix: wide strips across the lane that look like transverse cracks, plus
+  edge damage and patches. It can't be mapped to D10, so class-agnostic evaluation is the main NRD metric (D7).
+- *Is resolution or architecture the bottleneck?* Resolution, for Norwegian data. YOLO26 changes
+  nothing (see the YOLO26 findings), and 1280 px lifts RDD Norway from 0.284 to 0.370 and NRD from
+  0.208 to 0.317 (see the 1280 findings).
+- *Are there near-identical images across splits?* Rarely: under 2% of test images have a train image
+  within Hamming distance 30 (`results/duplicates/summary_test.csv`). Same-spot-different-viewpoint
+  pairs, as seen in China_MotorBike, can't be detected by hashing. This is still open, see below.
+
+**Still open (in progress or suggested)**
+- **China_MotorBike leakage:** inspect `pairs_closest_China_MotorBike.jpg`. If needed, re-evaluate on a
+  clean test split, or use an embedding-based similarity check that is robust to viewpoint changes.
+- **Customer operating point:** the model is under-confident on NRD. Choose a confidence threshold on
+  RDD Norway val (maximum F1) and report precision and recall at it on NRD.
+- **Run-to-run variance:** one extra baseline run with another seed, to measure whether YOLO26's
+  +1 point is within the noise.
+- **Resolution only where needed:** evaluate a routed system (1280 model for high-resolution
+  sources, 640 for the rest), or tile only the Norway images.
+
+**Not pursued (future work)**
+- Subsampling background images (D5).
+- RT-DETR or other transformer-based detectors.
+- Ultralytics' `tile` option (present in 8.4.215, not investigated).

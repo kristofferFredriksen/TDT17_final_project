@@ -71,6 +71,22 @@ Results land in `/cluster/work/$USER/tdt17/runs/<name>/`, energy per run in
    Rows are appended to `/cluster/work/$USER/tdt17/eval/results.csv`; PR curves and confusion
    matrices per model and set are saved next to it.
 
+## Results in this repo (`results/`)
+
+The small result files are committed, so the numbers in the presentation can be traced without IDUN access:
+
+| Folder | Contents |
+|---|---|
+| `summary/` | Summary table per model (time, energy, mAP overall / Norway / NRD) and test AP50 per class |
+| `evaluation/results.csv` | Every model × evaluation set from `evaluate.py` (may contain repeated rows: use the last per model and set) |
+| `energy/experiments.csv` | GPU energy per training and evaluation job |
+| `training/<run>/` | `args.yaml` (every training setting) and `results.csv` (metrics per epoch) |
+| `error_analysis/<run>/` | Outcome tables per country and class, found-rate by size, confusions, false alarms |
+| `duplicates/summary_test.csv` | Near-duplicate shares per country |
+
+**Not committed:** model weights (`best.pt`, about 19 MB each) and plots. They are kept on IDUN under
+`/cluster/work/vekaste/tdt17/runs/<run>/` and are available on request.
+
 ## Evaluation on NorwegianRoadDamage
 
 Most NRD annotations (84 of 109) have the generic class "Norwegian-Road-Damage-Masks", only

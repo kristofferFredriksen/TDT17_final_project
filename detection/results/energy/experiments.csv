@@ -1,0 +1,7 @@
+name,phase,gpu,start,hours,mean_watt,kwh,ev_km,pue,notes
+yolo11s_640,train,NVIDIA A100-PCIE-40GB,2026-11-18T11:05:31,2.514,195.5,0.492,2.7,1.0,model=yolo11s.pt imgsz=640 epochs=100 batch=32 
+eval: yolo11s_640,eval,NVIDIA A100-PCIE-40GB,2026-11-18T13:52:17,0.019,98.0,0.002,0.0,1.0,
+yolo26s_640,train,NVIDIA A100-PCIE-40GB,2026-11-18T11:31:35,2.866,205.1,0.588,3.3,1.0,model=yolo26s.pt imgsz=640 epochs=100 batch=32 
+eval: yolo11s_640 yolo26s_640,eval,NVIDIA A100-PCIE-40GB,2026-11-18T14:30:04,0.035,76.0,0.003,0.0,1.0,
+yolo11s_1280,train,NVIDIA A100-PCIE-40GB,2026-11-18T11:35:10,7.772,223.7,1.739,9.7,1.0,model=yolo11s.pt imgsz=1280 epochs=100 batch=16 
+eval: yolo11s_1280,eval,NVIDIA H100 80GB HBM3,2026-11-19T09:11:37,0.061,129.9,0.008,0.0,1.0,
