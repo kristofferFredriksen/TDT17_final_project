@@ -121,7 +121,8 @@ class RDD2022Boxes:
     """
     CLASSES = {"D00", "D10", "D20", "D40"}
 
-    def __init__(self, country="Norway", split="train", val_fraction=0.1, transform=None, root=RDD2022):
+    def __init__(self, country="Norway", split="train", val_fraction=0.1, transform=None, root=RDD2022,
+                 instance_ids=False):
         assert split in ("train", "val"), split
         base = Path(root) / country / "train"
         images = sorted((base / "images").glob("*.jpg"))
@@ -131,6 +132,7 @@ class RDD2022Boxes:
         images = images[-n_val:] if split == "val" else images[:-n_val]
         self.items = [(p, base / "annotations" / "xmls" / f"{p.stem}.xml") for p in images]
         self.transform = transform
+        self.instance_ids = instance_ids  # True: box k is filled with k (for the box projection loss), else 1
 
     def __len__(self):
         return len(self.items)
@@ -140,8 +142,10 @@ class RDD2022Boxes:
         image = np.array(Image.open(img_path).convert("RGB"))
         h, w = image.shape[:2]
         mask = np.zeros((h, w), np.uint8)
-        for x0, y0, x1, y1 in rdd_boxes(xml_path, self.CLASSES):
-            mask[max(0, int(y0)):min(h, int(np.ceil(y1))), max(0, int(x0)):min(w, int(np.ceil(x1)))] = 1
+        for k, (x0, y0, x1, y1) in enumerate(rdd_boxes(xml_path, self.CLASSES), 1):
+            # overlapping boxes: the later one wins the shared pixels
+            mask[max(0, int(y0)):min(h, int(np.ceil(y1))), max(0, int(x0)):min(w, int(np.ceil(x1)))] = \
+                min(k, 255) if self.instance_ids else 1
         if self.transform:
             out = self.transform(image=image, mask=mask)
             image, mask = out["image"], out["mask"]

@@ -61,6 +61,8 @@ def test_rdd_boxes(root):
     assert m[1:3, 2:6].all() and m[1:3, 2:6].sum() == m[:, :12].sum()  # D00 filled (fractional edges rounded out), Repair ignored
     assert m[8:10, 18:20].all()  # clipped D40
     assert train[1][1].sum() == 0 and val[0][1].all()
+    ids = RDD2022Boxes("Norway", "train", val_fraction=0.34, root=root, instance_ids=True)[0][1]
+    assert set(np.unique(ids)) == {0, 1, 2} and ids[1, 2] == 1 and ids[9, 19] == 2  # D00 -> 1, D40 -> 2, Repair skipped
 
 
 def test_rle_rejected():

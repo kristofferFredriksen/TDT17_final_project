@@ -23,6 +23,7 @@ from torch.utils.data import DataLoader, Subset
 
 from common.paths import DATA_ROOT
 from segmentation.dataset import PotholeMix, RDD2022Boxes
+from segmentation.losses import box_projection_loss
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -30,8 +31,9 @@ REPO = Path(__file__).resolve().parent.parent
 class Transform:
     """Downscale-only to max_long_side (keeps thin cracks visible, never upsamples small images), then albumentations."""
 
-    def __init__(self, max_long_side, crop=None):
+    def __init__(self, max_long_side, crop=None, binary=True):
         self.max_long_side = max_long_side
+        self.binary = binary  # False keeps mask values (box ids for the projection loss); resizing is nearest anyway
         aug = []
         if crop:  # training
             aug += [
@@ -50,7 +52,7 @@ class Transform:
             size = (round(image.shape[1] * s), round(image.shape[0] * s))
             image = cv2.resize(image, size, interpolation=cv2.INTER_AREA)
             mask = cv2.resize(mask, size, interpolation=cv2.INTER_NEAREST)
-        out = self.aug(image=image, mask=(mask > 0).astype(np.uint8))
+        out = self.aug(image=image, mask=(mask > 0).astype(np.uint8) if self.binary else mask)
         return {"image": out["image"], "mask": out["mask"].float()}
 
 
@@ -125,14 +127,19 @@ def main():
     (out / "config.yaml").write_text(yaml.safe_dump(cfg))
     print(f"device={device} data={DATA_ROOT} out={out}")
 
-    train_tf, val_tf = Transform(cfg["max_long_side"], cfg["crop"]), Transform(cfg["max_long_side"])
+    projection = cfg.get("box_loss") == "projection"  # only meaningful for box-labelled data (rdd_norway)
+    train_tf = Transform(cfg["max_long_side"], cfg["crop"], binary=not projection)
+    val_tf = Transform(cfg["max_long_side"])
     dataset = cfg.get("dataset", "pothole_mix")
     if dataset == "pothole_mix":
         train_ds, val_ds = PotholeMix("training", transform=train_tf), PotholeMix("validation", transform=val_tf)
     elif dataset == "rdd_norway":  # weak labels: filled detection boxes
-        train_ds, val_ds = RDD2022Boxes("Norway", "train", transform=train_tf), RDD2022Boxes("Norway", "val", transform=val_tf)
+        train_ds = RDD2022Boxes("Norway", "train", transform=train_tf, instance_ids=projection)
+        val_ds = RDD2022Boxes("Norway", "val", transform=val_tf)  # val metrics stay against filled boxes
     else:
         raise ValueError(f"unknown dataset: {dataset}")
+    if projection and dataset != "rdd_norway":
+        raise ValueError("box_loss: projection needs box labels (dataset: rdd_norway)")
     train_ds, val_ds = limited(train_ds, cfg.get("limit")), limited(val_ds, cfg.get("limit"))
     train_dl = DataLoader(train_ds, cfg["batch_size"], shuffle=True, num_workers=cfg["num_workers"],
                           drop_last=len(train_ds) > cfg["batch_size"], pin_memory=use_amp,
@@ -160,10 +167,13 @@ def main():
             model.train()
             losses = []
             for x, y in train_dl:
-                x, y = x.to(device), y.to(device).unsqueeze(1)
+                x, y = x.to(device), y.to(device)
                 with torch.autocast(device.type, dtype=torch.float16, enabled=use_amp):
                     logits = model(x)
-                    loss = dice(logits, y) + bce(logits, y)
+                    if projection:
+                        loss = box_projection_loss(logits, y)
+                    else:
+                        loss = dice(logits, y.unsqueeze(1)) + bce(logits, y.unsqueeze(1))
                 opt.zero_grad(set_to_none=True)
                 scaler.scale(loss).backward()
                 scaler.step(opt)
@@ -177,7 +187,9 @@ def main():
                    "lr": opt.param_groups[0]["lr"], "seconds": round(time.time() - t0, 1)}
             log.writerow(row); f.flush()
             print(row, flush=True)
-            if val["iou"] > best:
+            # Projection runs keep the last epoch: val IoU against *filled* boxes would reward filling the boxes,
+            # which is exactly what the projection loss avoids.
+            if val["iou"] > best or projection:
                 best, best_epoch = val["iou"], epoch
                 torch.save({"model": model.state_dict(), "config": cfg, "epoch": epoch}, out / "best.pt")
             elif cfg.get("patience") and epoch - best_epoch >= cfg["patience"]:
@@ -186,6 +198,7 @@ def main():
 
     summary = {  # for the sustainability section: GPU-hours x power = energy
         "best_val_iou": best,
+        "checkpoint_selection": "last epoch" if projection else "best val IoU",
         "best_epoch": best_epoch,
         "epochs_run": epoch,
         "train_seconds": round(time.time() - t_start, 1),
