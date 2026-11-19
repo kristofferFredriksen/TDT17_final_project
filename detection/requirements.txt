@@ -1,0 +1,12 @@
+# Exact versions used for every run in this project (IDUN, Python 3.11.3, 2026-11).
+# torch 2.15.0 from PyPI is built for CUDA 13 (torch-2.15.0+cu132), which needs a GPU with
+# compute capability >= 7.5: A100, H100 or H200 on IDUN. It does not run on the P100/V100 nodes.
+ultralytics==8.4.215
+torch==2.15.0
+torchvision==0.29.2
+numpy==2.4.6
+pandas==3.1.1
+matplotlib==3.11.2
+pillow==13.0.0
+opencv-python==5.1.0.95
+polars==2.1.0

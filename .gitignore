@@ -222,10 +222,18 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Project: training outputs and weights (keep on /cluster/work, not in git)
+# Project: data, model weights and outputs stay on IDUN (/cluster/work), not in git
+data/
+datasets/
 runs/
 outputs/
+logs/
+eda_out/
 wandb/
 *.pt
 *.pth
+*.onnx
+*.engine
+*.cache
 slurm-*.out
+.DS_Store
