@@ -202,13 +202,38 @@ Each entry: **Decision**, **Why**, **Alternatives**, and **Consequences / limita
 
 ---
 
+### S4. Compare inference time only on the same GPU type
+- **Observation:** Evaluation jobs may run on A100, H100 or H200 (S3). The 1280 evaluation ran on an
+  H100, so the `ms_per_img` values in `eval/results.csv` are not comparable between models.
+- **Decision:** Report inference time from the test step at the end of each training job, which always
+  runs on an A100. Time per image (preprocess + inference + postprocess):
+
+  | Model | Time per image |
+  |---|---|
+  | YOLO11s @ 640 | 0.4 + 1.3 + 0.6 = **2.3 ms** |
+  | YOLO26s @ 640 | 0.5 + 1.2 + 0.6 = **2.3 ms** |
+  | YOLO11s @ 1280 | 1.5 + 4.2 + 0.9 = **6.6 ms** (2.9× the baseline; still about 150 images/s) |
+
+### S5. Training energy totals (GPU only, A100-PCIE-40GB)
+| Run | Hours | Mean power | Energy | EV equivalent |
+|---|---|---|---|---|
+| `yolo11s_640` | 2.51 | 196 W | 0.49 kWh | 2.7 km |
+| `yolo26s_640` | 2.87 | 205 W | 0.59 kWh | 3.3 km |
+| `yolo11s_1280` | 7.77 | 224 W | 1.74 kWh | 9.7 km |
+
+- **Total for the three training runs:** 2.82 kWh, about 16 km in an EV.
+- **Evaluation jobs:** about 0.01 kWh in total.
+- **Not measured:** CPU-only jobs (data preparation, hashing), local work, and the failed or short jobs.
+- **Possible saving:** all three runs were almost flat after epoch ~40–50 (val mAP50 ~0.59 against a
+  best of ~0.61). About 50 epochs would likely cost 1–2 points of mAP50 and halve the energy.
+
 ## Run log
 
 | Run name | Slurm job | Model | imgsz | batch | CPUs | Notes |
 |---|---|---|---|---|---|---|
 | `yolo11s_640` | 26241819 | yolo11s.pt | 640 | 32 | 8 | Baseline, A100-PCIE-40GB, about 1:55 min per epoch. Early-stopped at epoch 96 (best: 76), 2.48 h, 0.49 kWh. Val: mAP50 0.602, mAP50-95 0.306. **Test: mAP50 0.596, mAP50-95 0.304** (D40 weakest: AP50 0.478, R 0.421) |
 | `yolo26s_640` | 26241980 | yolo26s.pt | 640 | 32 | 16 | A100-PCIE-40GB. Early-stopped at epoch 94 (best: 74), 2.85 h (about 1:49 min per epoch, 17% slower than the baseline despite 16 CPUs), 0.59 kWh. Val: mAP50 0.608, mAP50-95 0.313. **Test: mAP50 0.607, mAP50-95 0.310** (D40 AP50 0.492, D10 0.606) |
-| `yolo11s_1280` | 26241981 | yolo11s.pt | 1280 | 16 | 16 | 24 h time limit; about 5:10 min per epoch (about 3× the baseline), 16.1 GB GPU memory |
+| `yolo11s_1280` | 26241981 | yolo11s.pt | 1280 | 16 | 16 | 24 h time limit; about 5:10 min per epoch (about 3× the baseline), 16.1 GB GPU memory. Early-stopped at epoch 91 (best: 71), 7.74 h, **1.74 kWh (3.5× the baseline)**. Val: mAP50 0.606, mAP50-95 0.295. **Test: mAP50 0.599, mAP50-95 0.291**: D00 AP50 0.635 (+0.031, recall +0.046), D20 0.689 (−0.032). Inference 4.2 ms per image (3.2× the baseline) |
 
 ## Findings from the error analysis (`error_analysis_rdd.py`, baseline, test split, conf ≥ 0.25)
 - **The main error is missed damage, not wrong class.**
@@ -242,6 +267,49 @@ Each entry: **Decision**, **Why**, **Alternatives**, and **Consequences / limita
 - **Conclusion:** changing the architecture does not change *what* goes wrong. The errors are driven
   by the data (object size, domain, annotation style), which points to input resolution as the lever
   to test next.
+
+**YOLO11s at 1280 compared with 640 (same analysis): resolution helps exactly where the data predicted.**
+- **Norway: the share of correct boxes rises from 0.284 to 0.406 (+12 points),** and the missed
+  share falls from 59.8% to 43.9%.
+- **The gain holds for every box size, comparing the same boxes.** The size bins are measured at the
+  model input, so a <8 px box at 640 is a <16 px box at 1280. Share found in Norway, 640 → 1280:
+
+  | Box size at 640 px | Boxes | Found at 640 | Found at 1280 |
+  |---|---|---|---|
+  | <8 px | 205 | 3.9% | 15.2% |
+  | 8–16 px | 280 | 21.8% | 37.1% |
+  | 16–32 px | 259 | 32.0% | 46.3% |
+  | ≥32 px | 233 | 54.9% | 64.4% |
+- **Countries with 512–720 px source images gain nothing or lose:** India 0.397 → 0.355, the US
+  0.678 → 0.641, Japan 0.501 → 0.491, China_MotorBike 0.833 → 0.815. Upscaling adds no information,
+  and large boxes become large relative to the model's field of view.
+- **Czech (600 px) is the exception:** 0.259 → 0.319. Its faint cracks may benefit from more
+  feature-map cells per crack, even without extra source detail.
+- **Norway's false alarms rise** from 0.04 to 0.10 per image: the model is more sensitive there.
+- **Overall test mAP50 is flat** (0.596 → 0.599). Norway's gain is cancelled by losses elsewhere,
+  and the test split is dominated by Japan (1,051 images).
+- **Cost:** 3.5× the training energy (1.74 kWh) and 3.2× the inference time.
+- **Conclusion:** raise the resolution only where the source images have more detail. Next
+  experiment: tile the Norway images, or use a high-resolution model only for high-resolution input.
+- **mAP50 per set (`evaluate.py`), 640 → 1280:**
+
+  | Set | 640 | 1280 |
+  |---|---|---|
+  | RDD Norway | 0.284 | **0.370** (+0.086; recall 0.268 → 0.386) |
+  | **NRD agnostic (customer)** | 0.208 | **0.317** (+0.109, about +50% relative; recall 0.229 → 0.312) |
+  | China_MotorBike | 0.928 | 0.881 |
+  | China_MotorBike, mAP50-95 | 0.575 | 0.468 |
+  | India | 0.383 | 0.367 |
+  | Czech | 0.391 | 0.404 |
+  | Japan | 0.578 | 0.583 |
+  | United_States | 0.603 | 0.640 |
+
+  - NRD frames are 1280×720, so at 640 they are halved and at 1280 they are seen at native
+    resolution. That fits the pattern.
+  - **The US disagrees between the two measures:** its mAP goes up, but its share of correct boxes at
+    conf ≥ 0.25 goes down (0.678 → 0.641). mAP counts low-confidence detections too, so the ranking
+    improved while the default operating point lost recall.
+  - NRD per class is flat (0.150 → 0.138), but it rests on only 25 boxes, so it is noise.
 
 **Visual check of the example pages (`examples_<country>.jpg`):**
 - **China_MotorBike:**
