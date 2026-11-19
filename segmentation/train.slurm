@@ -1,8 +1,8 @@
 #!/bin/bash
 # Submit from the repo root:
-#   sbatch slurm/seg_train.slurm                                    # baseline config
-#   sbatch slurm/seg_train.slurm --set epochs=5                     # extra args go to train.py
-#   CONFIG=segmentation/configs/other.yaml sbatch slurm/seg_train.slurm
+#   sbatch segmentation/train.slurm                                    # baseline config
+#   sbatch segmentation/train.slurm --set epochs=5                     # extra args go to train.py
+#   CONFIG=segmentation/configs/other.yaml sbatch segmentation/train.slurm
 #SBATCH --job-name=seg-train
 #SBATCH --account=share-ie-idi       # check yours with: sacctmgr show assoc user=$USER format=account
 #SBATCH --partition=GPUQ

@@ -3,8 +3,8 @@
     python3 -m segmentation.run_stats                      # runs in $OUT_ROOT or /cluster/work/$USER/tdt17/runs
     python3 -m segmentation.run_stats path/to/runs
 
-Power/utilisation come from the power_<jobid>.csv written by slurm/seg_train.slurm, or for non-slurm runs the
-log scripts/train_gpu.sh writes (path in summary.json). Sampled every 30 s.
+Power/utilisation come from the power_<jobid>.csv written by segmentation/train.slurm, or for non-slurm runs the
+log segmentation/train_gpu.sh writes (path in summary.json). Sampled every 30 s.
 """
 import csv
 import json

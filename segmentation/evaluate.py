@@ -3,7 +3,7 @@
     python3 -m segmentation.evaluate /cluster/work/$USER/tdt17/runs/<run>/best.pt [more best.pt ...]
 
 Writes <run>/eval.json and <run>/eval_figs/, and appends one row per checkpoint to
-results/segmentation/eval_results.csv (commit that file; it is the results table for the slides).
+segmentation/results/eval_results.csv (commit that file; it is the results table for the slides).
 Images are evaluated at the training scale (long side capped at the config's max_long_side).
 """
 import argparse
@@ -146,7 +146,7 @@ def main():
                                                     "miou_img", "area_pct_gt", "area_pct_pred", "area_pct_mae")},
                "nrd_ms_per_image": round(nrd["ms_per_image"], 1) if nrd["ms_per_image"] else None,
                "device": torch.cuda.get_device_name() if device.type == "cuda" else device.type}
-        append_row(REPO / "results/segmentation/eval_results.csv", row)
+        append_row(REPO / "segmentation/results/eval_results.csv", row)
 
         print(f"\n== {run.name} (epoch {epoch})")
         for name, m in pm.items():

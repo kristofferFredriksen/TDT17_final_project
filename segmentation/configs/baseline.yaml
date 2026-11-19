@@ -4,7 +4,7 @@ arch: Unet
 encoder: resnet34
 encoder_weights: imagenet
 
-max_long_side: 1024   # downscale-only; at 512 thin cracks shrink to ~1.5 px (see eda/seg_eda.ipynb)
+max_long_side: 1024   # downscale-only; at 512 thin cracks shrink to ~1.5 px (see segmentation/eda.ipynb)
 crop: 512
 
 epochs: 40

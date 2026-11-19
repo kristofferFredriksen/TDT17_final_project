@@ -1,8 +1,8 @@
 #!/bin/bash
 # Start one training run in the background on one GPU of a non-slurm server (e.g. vc04), with power logging.
-#   scripts/train_gpu.sh <gpu> <config> [--set key=value ...]
-#   scripts/train_gpu.sh 0 segmentation/configs/baseline.yaml
-#   scripts/train_gpu.sh 1 segmentation/configs/segformer_b2.yaml --set num_workers=6
+#   segmentation/train_gpu.sh <gpu> <config> [--set key=value ...]
+#   segmentation/train_gpu.sh 0 segmentation/configs/baseline.yaml
+#   segmentation/train_gpu.sh 1 segmentation/configs/segformer_b2.yaml --set num_workers=6
 # Check free GPUs first with nvidia-smi. Logs go to logs/ (gitignored), runs to runs/.
 set -euo pipefail
 GPU=$1; CONFIG=$2; shift 2

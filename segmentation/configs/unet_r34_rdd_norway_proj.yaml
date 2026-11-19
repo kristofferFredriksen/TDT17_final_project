@@ -3,7 +3,7 @@
 # Stage 2: continue the Pothole-Mix U-Net on RDD2022-Norway,
 # so the model sees Norwegian roads and everything around them (sky, snow, rails, bonnet).
 # Pass the stage-1 checkpoint on the command line:
-#   CONFIG=segmentation/configs/unet_r34_rdd_norway_proj.yaml sbatch slurm/seg_train.slurm \
+#   CONFIG=segmentation/configs/unet_r34_rdd_norway_proj.yaml sbatch segmentation/train.slurm \
 #     --set init_checkpoint=/cluster/work/$USER/tdt17/runs/<pothole-mix run>/best.pt
 name: unet_r34_rdd_norway_proj
 arch: Unet

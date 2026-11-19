@@ -202,7 +202,7 @@ def main():
         "train_seconds": round(time.time() - t_start, 1),
         "device": torch.cuda.get_device_name() if use_amp else device.type,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
-        "power_log": os.environ.get("POWER_LOG"),  # set by scripts/train_gpu.sh (non-slurm runs)
+        "power_log": os.environ.get("POWER_LOG"),  # set by segmentation/train_gpu.sh (non-slurm runs)
         "data_root": str(DATA_ROOT),
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2))

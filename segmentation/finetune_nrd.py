@@ -117,7 +117,7 @@ def main():
            **{f"nrd_{k}": round(pooled[k], 4) for k in ("iou", "dice", "precision", "recall", "region_recall", "image_accuracy",
                                                 "miou_img", "area_pct_gt", "area_pct_pred", "area_pct_mae")},
            "seconds": result["seconds"]}
-    append_row(REPO / "results/segmentation/finetune_results.csv", row)
+    append_row(REPO / "segmentation/results/finetune_results.csv", row)
 
     print(f"\n== LOVO pooled over {len(records)} images ({args.init} init): IoU {pooled['iou']:.3f}  Dice {pooled['dice']:.3f}  "
           f"P {pooled['precision']:.3f}  R {pooled['recall']:.3f}  region recall {pooled['region_recall']:.3f}  "

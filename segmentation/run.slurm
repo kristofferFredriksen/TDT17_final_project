@@ -1,8 +1,8 @@
 #!/bin/bash
 # Run any segmentation module as a GPU job. Everything after the script name is passed to `python3 -m`:
-#   sbatch slurm/seg_run.slurm segmentation.evaluate /cluster/work/$USER/tdt17/runs/<run>/best.pt
-#   sbatch slurm/seg_run.slurm segmentation.finetune_nrd /cluster/work/$USER/tdt17/runs/<run>/best.pt --init imagenet
-# (Training has its own script with power logging: slurm/seg_train.slurm.)
+#   sbatch segmentation/run.slurm segmentation.evaluate /cluster/work/$USER/tdt17/runs/<run>/best.pt
+#   sbatch segmentation/run.slurm segmentation.finetune_nrd /cluster/work/$USER/tdt17/runs/<run>/best.pt --init imagenet
+# (Training has its own script with power logging: segmentation/train.slurm.)
 #SBATCH --job-name=seg-run
 #SBATCH --account=share-ie-idi       # check yours with: sacctmgr show assoc user=$USER format=account
 #SBATCH --partition=GPUQ

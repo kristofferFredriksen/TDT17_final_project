@@ -1,6 +1,6 @@
 # Baseline U-Net, trained longer with early stopping. Meant for the pre-shrunk data and 16 CPUs:
 #   DATA_ROOT=/cluster/work/$USER/tdt17/data_1024 CONFIG=segmentation/configs/unet_r34_long.yaml \
-#     sbatch --cpus-per-task=16 --mem=48G slurm/seg_train.slurm
+#     sbatch --cpus-per-task=16 --mem=48G segmentation/train.slurm
 name: unet_r34_long
 arch: Unet
 encoder: resnet34
