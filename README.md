@@ -32,5 +32,3 @@ rsync -avh "$R/$PM/pothole-mix-v1.0-20220526.zip*" data/$PM/               # 3.4
 (cd data/$PM && sha256sum -c pothole-mix-v1.0-20220526.zip.sha256sum && unzip -q pothole-mix-v1.0-20220526.zip && rm pothole-mix-v1.0-20220526.zip*)
 rsync -avh $R/RDD2022/RDD2022/Norway data/RDD2022/RDD2022/                 # 11 GB
 ```
-
-Each rsync asks for the password; several failed logins in a row get you blocked for a while.
