@@ -95,28 +95,38 @@ On the Pothole-Mix test set, both models reach about **0.55 IoU**; SegFormer is 
 
 On the customer's data, **zero-shot fails completely**: IoU 0.003. The model marks sky, trees, snow and the car bonnet as damage. Pothole-Mix contains almost only road, so it never learned what is *not* road.
 
-The second stage on Norwegian roads helps a lot: with filled boxes, IoU rises to **0.19** without a single customer image. The projection loss finds 84% of the damaged regions, but it marks about three times too much area, so its IoU is lower.
+The second stage on Norwegian roads helps a lot: with filled boxes, IoU rises to **0.19** without a single customer image. The projection loss stops the sky-and-trees errors too, but it draws thin crack-like lines all over the road and marks three times too much area, so its IoU is lower.
 
-The biggest step is fine-tuning on the customer's own videos. Holding out one video at a time, IoU reaches **0.33**, stable over three seeds, and the off-road false positives disappear. Starting from Pothole-Mix or from plain ImageNet gives the same IoU, but Pothole-Mix gives higher precision and ImageNet higher recall.
+The biggest step is fine-tuning on the customer's own videos. Holding out one video at a time, the Pothole-Mix U-Net reaches **0.33**, and the off-road false positives disappear. Starting from Pothole-Mix or from plain ImageNet gives the same IoU, but Pothole-Mix gives higher precision and ImageNet higher recall. SegFormer lands in the same place as the U-Net.
+
+The best result combines both: the model that first saw Norwegian roads through the detection boxes, then fine-tuned on the customer's videos, reaches **0.35** — with filled boxes or with the projection loss, the difference is within seed noise. The filled-box version also gets the damaged area almost right: 0.51% of the image predicted, against 0.55% labelled.
 
 **On screen**
 
-| NRD, 50 images | IoU | Precision | Recall | Region recall |
-|---|---:|---:|---:|---:|
-| Zero-shot U-Net (Pothole-Mix) | 0.003 | 0.003 | 0.055 | 0.15 |
-| Zero-shot, stage 2 filled boxes | 0.185 | 0.323 | 0.303 | 0.31 |
-| Zero-shot, stage 2 projection loss | 0.065 | 0.082 | 0.233 | 0.84 |
-| Fine-tuned U-Net, Pothole-Mix init (3 seeds) | **0.327 ± 0.007** | 0.589 | 0.424 | 0.67 |
-| Fine-tuned U-Net, ImageNet init (3 seeds) | 0.314 ± 0.025 | 0.467 | 0.493 | 0.72 |
-| Fine-tuned SegFormer, Pothole-Mix init (3 seeds) | 0.320 ± 0.010 | 0.539 | 0.441 | 0.61 |
+| NRD, 50 images | IoU | Precision | Recall | Region recall | Damage area (label 0.55%) |
+|---|---:|---:|---:|---:|---:|
+| **No NRD training (zero-shot)** | | | | | |
+| U-Net, Pothole-Mix | 0.003 | 0.003 | 0.055 | 0.15 | |
+| U-Net, + stage 2 filled boxes | 0.185 | 0.323 | 0.303 | 0.31 | 0.51% |
+| U-Net, + stage 2 projection loss | 0.065 | 0.082 | 0.233 | 0.84 | 1.54% |
+| **Fine-tuned, leave one video out (3 seeds)** | | | | | |
+| U-Net, Pothole-Mix init | 0.327 ± 0.007 | 0.589 | 0.424 | 0.67 | |
+| U-Net, ImageNet init | 0.314 ± 0.025 | 0.467 | 0.493 | 0.72 | |
+| SegFormer-B2, Pothole-Mix init | 0.320 ± 0.010 | 0.539 | 0.441 | 0.61 | |
+| U-Net, + stage 2 filled boxes | **0.354 ± 0.007** | 0.542 | 0.506 | 0.69 | 0.51% |
+| U-Net, + stage 2 projection loss | 0.350 ± 0.011 | 0.571 | 0.476 | 0.65 | 0.46% |
 
-> **TODO:** add the fine-tuned rows for the two stage-2 models (projection LOVO is running, filled-box LOVO not yet run). If stage 2 + fine-tuning beats 0.327, that becomes the headline.
+> Source: `segmentation/results/eval_results.csv` and `finetune_results.csv`. The area column is only filled where it was measured (newer runs).
+> Too many rows for one slide: show the zero-shot block first, then the fine-tuned block, and highlight the last two rows.
 
 ![Zero-shot on NRD](img/seg_nrd_zeroshot.png)
-*Zero-shot: red = prediction, green = label. Sky, trees and snow are marked as damage.*
+*Zero-shot, Pothole-Mix only: red = prediction, green = label. Sky, trees and snow are marked as damage.*
 
-![Fine-tuned on NRD](img/seg_nrd_lovo.png)
-*Fine-tuned, held-out video: predictions follow the damaged areas.*
+![Zero-shot after stage 2, projection loss](img/seg_nrd_zeroshot_stage2_proj.png)
+*Zero-shot after stage 2 (projection loss): off-road errors are gone, but thin lines cover the whole road.*
+
+![Fine-tuned, best model](img/seg_nrd_lovo_stage2_filled.png)
+*Best model (stage 2 filled boxes + fine-tuning), held-out videos: predictions follow the damaged areas.*
 
 ---
 
@@ -124,11 +134,13 @@ The biggest step is fine-tuning on the customer's own videos. Holding out one vi
 
 **Say**
 
-The main lesson is **domain gap**. A model that scores 0.55 on public data scores almost zero on Norwegian dashcam video. Even 40 frames from other Norwegian videos fix most of it, and so do Norwegian detection boxes.
+The main lesson is **domain gap**. A model that scores 0.55 on public data scores almost zero on Norwegian dashcam video. Even 40 frames from other Norwegian videos fix most of it, and so do Norwegian detection boxes — and the two add up.
+
+One result surprised me. The background paper warns that filled boxes overstate the damage area, so I built the projection loss to avoid that. On this data, filled boxes predicted almost exactly the right area, and the projection loss over-predicted until it was fine-tuned. After fine-tuning, the two are equal.
 
 The metric is also limited by the labels. Loose polygons around a damaged area can't be matched pixel for pixel, so 0.33 IoU understates how useful the masks look. That's why I also report region recall: two thirds of the damaged areas are found.
 
-Limitations: 50 images from six videos, all from one day in early spring, so the uncertainty is large. And box labels are a weak signal: filled boxes overstate the area, and the projection loss as I implemented it doesn't stop the model from over-predicting.
+Limitations: 50 images from six videos, all from one day in early spring, so the uncertainty is large; the gain from stage 2 is about 0.025 IoU, consistent over three seeds but small. And without its colour-similarity term, the projection loss doesn't stop thin false lines on the road.
 
 Improvements: label more Norwegian frames, or use the paper's approach of SAM-3 pseudo-labels turned into masks.
 
@@ -151,7 +163,7 @@ At inference, the U-Net needs about **12 ms per image** on an A100 and 4 ms on a
 | U-Net long run | 0.085 kWh | |
 | Inference: U-Net vs SAM-3 pipeline | 12 ms vs 457 ms / image | 24 M vs 473 M params |
 
-> GPU only, A100 on IDUN. **TODO:** add stage-2 and LOVO energy (5090 runs have power logs in `logs/`). EV figure uses ~0.18 kWh/km, the same factor as the detection part.
+> GPU only, A100 on IDUN. Stage 2 with filled boxes: 0.066 kWh (A100). **TODO:** the 5090 energy for the projection run is too high (it shared the GPU with another run): rerun it alone or leave it out. LOVO energy was not logged (~3.5 min per seed on the 5090). EV figure uses ~0.18 kWh/km, the same factor as the detection part.
 
 ---
 
@@ -159,7 +171,7 @@ At inference, the U-Net needs about **12 ms per image** on an A100 and 4 ms on a
 
 **Say**
 
-Three takeaways. A good score on public data says little about the customer's data: always evaluate on the target domain, with a split that doesn't leak. Look at the labels, not just the images: the annotation style decided the task and the metric. And a small amount of in-domain data beat every architectural choice I tried.
+Three takeaways. A good score on public data says little about the customer's data: always evaluate on the target domain, with a split that doesn't leak. Look at the labels, not just the images: the annotation style decided the task and the metric. And data closer to the customer's beat every architectural choice I tried: Norwegian boxes and 40 Norwegian frames each mattered more than CNN versus transformer.
 
 > Contributions: Kristoffer = segmentation, Victor = detection; shared intro and conclusion.
 > Segmentation references: Pothole-Mix (Mendeley Data, kfth5g2xk3); Norwegian Road Damage (Roboflow, CC BY 4.0); Shami et al. 2026 (the background paper); Ronneberger et al. 2015 (U-Net); Xie et al. 2021 (SegFormer); Tian et al. 2021 (BoxInst, projection loss); segmentation-models-pytorch.
