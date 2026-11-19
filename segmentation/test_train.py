@@ -30,6 +30,7 @@ def test_evaluate():
     half = y.clone(); half[0, 1] = 0  # predict 4 of 8 positives, no false positives
     m = evaluate(Fixed(half.bool()), [(torch.zeros(1, 3, 4, 4), y)], "cpu")
     assert abs(m["iou"] - 0.5) < 1e-6 and abs(m["precision"] - 1) < 1e-6 and abs(m["recall"] - 0.5) < 1e-6
+    assert abs(m["miou_img"] - 0.5) < 1e-6
 
 
 if __name__ == "__main__":

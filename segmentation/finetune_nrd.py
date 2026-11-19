@@ -11,7 +11,6 @@ No validation split: with 2-16 frames per video there is nothing to spare, so ev
 schedule (--steps) and the final weights.
 """
 import argparse
-import csv
 import json
 import os
 import time
@@ -23,7 +22,7 @@ import torch
 from torch.utils.data import DataLoader, Subset
 
 from segmentation.dataset import NorwegianRoadDamage
-from segmentation.evaluate import nrd_metrics, nrd_predict
+from segmentation.evaluate import append_row, nrd_metrics, nrd_predict
 from segmentation.train import REPO, Transform
 
 
@@ -111,21 +110,17 @@ def main():
               "slurm_job_id": os.environ.get("SLURM_JOB_ID")}
     (out / "lovo.json").write_text(json.dumps(result, indent=2))
 
-    row = {"run": out.name, "base": run.name, "arch": cfg["arch"], "encoder": cfg["encoder"], "init": args.init,
+    row = {"run": out.name, "base": run.name, "arch": cfg["arch"], "encoder": cfg["encoder"], "init": args.init, "seed": args.seed,
            "steps": args.steps, "lr": args.lr, "folds": len(folds),
-           **{f"nrd_{k}": round(pooled[k], 4) for k in ("iou", "dice", "precision", "recall", "region_recall", "image_accuracy")},
+           **{f"nrd_{k}": round(pooled[k], 4) for k in ("iou", "dice", "precision", "recall", "region_recall", "image_accuracy",
+                                                "miou_img", "area_pct_gt", "area_pct_pred", "area_pct_mae")},
            "seconds": result["seconds"]}
-    table = REPO / "results/segmentation/finetune_results.csv"
-    new = not table.exists()
-    with open(table, "a", newline="") as f:
-        w = csv.DictWriter(f, row.keys())
-        if new:
-            w.writeheader()
-        w.writerow(row)
+    append_row(REPO / "results/segmentation/finetune_results.csv", row)
 
     print(f"\n== LOVO pooled over {len(records)} images ({args.init} init): IoU {pooled['iou']:.3f}  Dice {pooled['dice']:.3f}  "
           f"P {pooled['precision']:.3f}  R {pooled['recall']:.3f}  region recall {pooled['region_recall']:.3f}  "
-          f"image acc {pooled['image_accuracy']:.3f}  total {result['seconds']} s")
+          f"image acc {pooled['image_accuracy']:.3f}  mIoU/img {pooled['miou_img']:.3f}  "
+          f"area% pred {pooled['area_pct_pred']:.2f} vs gt {pooled['area_pct_gt']:.2f}  total {result['seconds']} s")
 
 
 if __name__ == "__main__":

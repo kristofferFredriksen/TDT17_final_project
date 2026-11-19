@@ -39,6 +39,16 @@ def region_hits(gt, pred, min_cover=REGION_MIN_COVER):
     return n, int((cover >= min_cover).sum())
 
 
+def append_row(table, row):
+    """Append to a results CSV; rewrites the header if new columns appear (old rows get blanks)."""
+    rows = list(csv.DictReader(open(table))) if table.exists() else []
+    cols = list(dict.fromkeys([*(rows[0].keys() if rows else []), *row]))
+    with open(table, "w", newline="") as f:
+        w = csv.DictWriter(f, cols)
+        w.writeheader()
+        w.writerows(rows + [row])
+
+
 def load(ckpt_path, device):
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     cfg = ckpt["config"]
@@ -65,8 +75,12 @@ def nrd_metrics(records, times, fig_path, title="NRD zero-shot"):
     """Micro pixel metrics + region recall + image-level accuracy over all records, and an example figure."""
     tp = fp = fn = regions = hits = 0
     img = {"tp": 0, "fp": 0, "fn": 0, "tn": 0}
+    per_image, area_gt, area_pred = [], [], []
     for _, g, p in records:
         tp += int((p & g).sum()); fp += int((p & ~g).sum()); fn += int((~p & g).sum())
+        if g.any():
+            per_image.append((p & g).sum() / (p | g).sum())
+        area_gt.append(100 * g.mean()); area_pred.append(100 * p.mean())  # damage area, % of image
         n, h = region_hits(g, p)
         regions += n; hits += h
         pred_pos, gt_pos = p.mean() >= IMAGE_MIN_FRACTION, g.any()
@@ -78,6 +92,9 @@ def nrd_metrics(records, times, fig_path, title="NRD zero-shot"):
         "precision": tp / (tp + fp + eps), "recall": tp / (tp + fn + eps),
         "region_recall": hits / max(regions, 1), "regions": regions,
         "image_accuracy": (img["tp"] + img["tn"]) / len(records), "image_confusion": img,
+        "miou_img": float(np.mean(per_image)) if per_image else float("nan"),
+        "area_pct_gt": float(np.mean(area_gt)), "area_pct_pred": float(np.mean(area_pred)),
+        "area_pct_mae": float(np.mean(np.abs(np.array(area_pred) - np.array(area_gt)))),
         "ms_per_image": 1000 * float(np.mean(times)) if times else None,
     }
 
@@ -125,22 +142,18 @@ def main():
 
         row = {"run": run.name, "arch": cfg["arch"], "encoder": cfg["encoder"], "best_epoch": epoch,
                **{f"pm_test_{k}": round(v, 4) for k, v in pm["all"].items()},
-               **{f"nrd_{k}": round(nrd[k], 4) for k in ("iou", "dice", "precision", "recall", "region_recall", "image_accuracy")},
+               **{f"nrd_{k}": round(nrd[k], 4) for k in ("iou", "dice", "precision", "recall", "region_recall", "image_accuracy",
+                                                    "miou_img", "area_pct_gt", "area_pct_pred", "area_pct_mae")},
                "nrd_ms_per_image": round(nrd["ms_per_image"], 1) if nrd["ms_per_image"] else None,
                "device": torch.cuda.get_device_name() if device.type == "cuda" else device.type}
-        table = REPO / "results/segmentation/eval_results.csv"
-        new = not table.exists()
-        with open(table, "a", newline="") as f:
-            w = csv.DictWriter(f, row.keys())
-            if new:
-                w.writeheader()
-            w.writerow(row)
+        append_row(REPO / "results/segmentation/eval_results.csv", row)
 
         print(f"\n== {run.name} (epoch {epoch})")
         for name, m in pm.items():
-            print(f"  PM test {name:28s} IoU {m['iou']:.3f}  Dice {m['dice']:.3f}  P {m['precision']:.3f}  R {m['recall']:.3f}")
+            print(f"  PM test {name:28s} IoU {m['iou']:.3f}  Dice {m['dice']:.3f}  P {m['precision']:.3f}  R {m['recall']:.3f}  mIoU/img {m['miou_img']:.3f}")
         print(f"  NRD zero-shot  IoU {nrd['iou']:.3f}  Dice {nrd['dice']:.3f}  P {nrd['precision']:.3f}  R {nrd['recall']:.3f}  "
               f"region recall {nrd['region_recall']:.3f} ({nrd['regions']} regions)  image acc {nrd['image_accuracy']:.3f}  "
+              f"mIoU/img {nrd['miou_img']:.3f}  area% pred {nrd['area_pct_pred']:.2f} vs gt {nrd['area_pct_gt']:.2f}  "
               f"{nrd['ms_per_image']:.1f} ms/img")
 
 

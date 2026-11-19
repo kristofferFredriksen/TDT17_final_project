@@ -63,21 +63,28 @@ def predict(model, x):
 
 @torch.no_grad()
 def evaluate(model, loader, device, threshold=0.5):
-    """Dataset-level (micro) binary metrics: TP/FP/FN summed over all pixels of all images."""
+    """Binary metrics. iou/dice/precision/recall are dataset-level (micro: TP/FP/FN summed over all pixels).
+    miou_img is IoU per image averaged over images that contain damage (the "foreground mIoU" used by
+    Shami et al. 2026, so our numbers can be put next to theirs)."""
     model.eval()
     tp = fp = fn = 0
+    per_image = []
     for x, y in loader:
         x, y = x.to(device), y.to(device).bool()
         p = torch.sigmoid(predict(model, x)).squeeze(1) > threshold
         tp += (p & y).sum().item()
         fp += (p & ~y).sum().item()
         fn += (~p & y).sum().item()
+        has = y.flatten(1).any(1)
+        inter, union = (p & y).flatten(1).sum(1), (p | y).flatten(1).sum(1)
+        per_image += (inter[has] / union[has]).tolist()
     eps = 1e-9
     return {
         "iou": tp / (tp + fp + fn + eps),
         "dice": 2 * tp / (2 * tp + fp + fn + eps),
         "precision": tp / (tp + fp + eps),
         "recall": tp / (tp + fn + eps),
+        "miou_img": float(np.mean(per_image)) if per_image else float("nan"),
     }
 
 
@@ -146,7 +153,7 @@ def main():
 
     best, best_epoch, t_start = -1.0, 0, time.time()
     with open(out / "metrics.csv", "w", newline="") as f:
-        log = csv.DictWriter(f, ["epoch", "train_loss", "val_iou", "val_dice", "val_precision", "val_recall", "lr", "seconds"])
+        log = csv.DictWriter(f, ["epoch", "train_loss", "val_iou", "val_dice", "val_precision", "val_recall", "val_miou_img", "lr", "seconds"])
         log.writeheader()
         for epoch in range(1, cfg["epochs"] + 1):
             t0 = time.time()
